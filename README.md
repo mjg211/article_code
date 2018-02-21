@@ -2,6 +2,8 @@
 Article Code
 ------------
 
+Folder containing code corresponding to several publications.
+
 --------------------------------------------------------------------------------------------------------------
 mjg211/article_code/Group Sequential Crossover Trial Designs with Strong Control of the Familywise Error Rate/
 --------------------------------------------------------------------------------------------------------------
