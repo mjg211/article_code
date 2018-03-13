@@ -30,3 +30,17 @@ Contains:
 - analyse.gs.sw.R: R function to assess performance of naive and adjusted estimation procedures described in the paper;
 - Figure_and_Table_Production.R: R code to reproduce the figures and tables from the paper;
 - optimal.gs.sw.R: R function to determine optimal group sequential SW-CRT designs.
+
+----------------------------------------------------------------------------------------------------------------------------
+mjg211/article_code/A Two-stage Fisher Exact Test for Multi-arm Studies with Binary Outcome Variables/
+----------------------------------------------------------------------------------------------------------------------------
+
+Code corresponding to:
+
+Grayling MJ, Mander AP, Wason JMS (2018) A Two-stage Fisher Exact Test for Multi-arm Studies with Binary Outcome Variables.
+
+Contains:
+
+- Binomial exact functions.R: Functions for determining two-stage exact binomial designs;
+- Example.R: Example code for determining designs (corresponding to Table 2 and Figure 1);
+- Fisher exact functions.R: Functions for determining two-stage Fisher exact designs.
