@@ -19,6 +19,19 @@ Contains:
 - Fisher exact functions.R: Functions for determining two-stage Fisher exact designs.
 
 ----------------------------------------------------------------------------------------------------------------------------
+mjg211/article_code/Blinded and unblinded sample size re-estimation procedures for stepped-wedge cluster randomized trials/
+----------------------------------------------------------------------------------------------------------------------------
+
+Code corresponding to:
+
+Grayling MJ, Mander AP, Wason JMS (2018) Blinded and unblinded sample size re-estimation procedures for stepped-wedge cluster randomized trials.
+
+Contains:
+
+- Figure_and_Table_production.R: R code to reproduce the figures and tables from the paper;
+- ssre.sw.R: R function to assess performance of the proposed blinded and unblinded re-estimation procedures.
+
+----------------------------------------------------------------------------------------------------------------------------
 mjg211/article_code/Design optimisation and post-trial analysis in group sequential stepped-wedge cluster randomised trials/
 ----------------------------------------------------------------------------------------------------------------------------
 
