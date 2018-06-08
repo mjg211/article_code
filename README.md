@@ -57,3 +57,15 @@ Contains:
 
 - groupSeqCrossoverMatrices.m:  Matlab code using symbolic algebra to compute equations from the paper;
 - groupSeqCrossover_1.2.tar.gz: R package for determining group sequential crossover trial designs.
+
+--------------------------------------------------------------------------------------------------------------
+mjg211/article_code/Group sequential designs for stepped-wedge cluster randomised trials/
+--------------------------------------------------------------------------------------------------------------
+
+Code corresponding to:
+
+Grayling MJ, Wason JMS, Mander AP (2017) Group sequential designs for stepped-wedge cluster randomised trials. Clinical Trials 14(5):507–517.
+
+Contains:
+
+- gs.sw.R: R code to find group sequential (cross-sectional) stepped-wedge cluster randomised trial designs.
