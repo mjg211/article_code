@@ -19,6 +19,21 @@ Contains:
 - Fisher exact functions.R: Functions for determining two-stage Fisher exact designs.
 
 ----------------------------------------------------------------------------------------------------------------------------
+mjg211/article_code/Admissible multi-arm stepped-wedge cluster randomized trial designs/
+----------------------------------------------------------------------------------------------------------------------------
+
+Admissible multi-arm stepped-wedge cluster randomized trial designs
+
+Code corresponding to:
+
+Grayling MJ, Mander AP, Wason JMS (2018) Admissible multi-arm stepped-wedge cluster randomized trial designs.
+
+Contains:
+
+- MA-SW.R: Code to find admissible designs and reproduce the Tables/Figures from the article.
+
+
+----------------------------------------------------------------------------------------------------------------------------
 mjg211/article_code/Blinded and unblinded sample size re-estimation procedures for stepped-wedge cluster randomized trials/
 ----------------------------------------------------------------------------------------------------------------------------
 
