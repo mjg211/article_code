@@ -60,6 +60,18 @@ Contains:
 - Figure_and_Table_Production.R: R code to reproduce the figures and tables from the paper;
 - optimal.gs.sw.R: R function to determine optimal group sequential SW-CRT designs.
 
+----------------------------------------------------------------------------------------------------------------------------
+mjg211/article_code/Exact group sequential designs for two-arm experiments with Poisson distributed outcome variables/
+----------------------------------------------------------------------------------------------------------------------------
+
+Code corresponding to:
+
+Grayling MJ, Wason JMS, Mander AP (2018) Exact group sequential designs for two-arm experiments with Poisson distributed outcome variables.
+
+Contains:
+
+- gs_poisson.R: R function to recreate the results from the paper.
+
 --------------------------------------------------------------------------------------------------------------
 mjg211/article_code/Group Sequential Crossover Trial Designs with Strong Control of the Familywise Error Rate/
 --------------------------------------------------------------------------------------------------------------
