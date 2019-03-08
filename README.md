@@ -70,7 +70,8 @@ Grayling MJ, Wason JMS, Mander AP (2018) Exact group sequential designs for two-
 
 Contains:
 
-- gs_poisson.R: R function to recreate the results from the paper.
+- skellam_R.R: R code to recreate the results from the paper;
+- skellam_Rcpp.cpp: Rcpp code to search for the globally-optimal designs. Used by skellam_R.R.
 
 --------------------------------------------------------------------------------------------------------------
 mjg211/article_code/Group Sequential Crossover Trial Designs with Strong Control of the Familywise Error Rate/
