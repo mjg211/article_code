@@ -4,9 +4,6 @@ Article Code
 
 Folder containing code corresponding to several publications.
 
-----------------------------------------------------------------------------------------------------------------------------
-mjg211/article_code/A Two-stage Fisher Exact Test for Multi-arm Studies with Binary Outcome Variables/
-----------------------------------------------------------------------------------------------------------------------------
 
 Code corresponding to:
 
@@ -17,6 +14,18 @@ Contains:
 - Binomial exact functions.R: Functions for determining two-stage exact binomial designs;
 - Example.R: Example code for determining designs (corresponding to Table 2 and Figure 1);
 - Fisher exact functions.R: Functions for determining two-stage Fisher exact designs.
+
+----------------------------------------------------------------------------------------------------------------------------
+mjg211/article_code/A review of available software for adaptive clinical trial design/
+----------------------------------------------------------------------------------------------------------------------------
+
+Code corresponding to:
+
+Grayling MJ, Wheeler GM (2020) A review of available software for adaptive clinical trial design.
+
+Contains:
+
+- supplementary_data.xlsx: Supplementary data discussed in Supplementary File 1.
 
 ----------------------------------------------------------------------------------------------------------------------------
 mjg211/article_code/Admissible multi-arm stepped-wedge cluster randomized trial designs/
