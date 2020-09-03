@@ -28,6 +28,18 @@ Contains:
 - supplementary_data.xlsx: Supplementary data discussed in Supplementary File 1.
 
 ----------------------------------------------------------------------------------------------------------------------------
+mjg211/article_code/Accounting for variation in the required sample size in the design of group sequential trials/
+----------------------------------------------------------------------------------------------------------------------------
+
+Code corresponding to:
+
+Grayling MJ, Mander AP (2020) Accounting for variation in the required sample size in the design of group sequential trials.
+
+Contains:
+
+- Figures_2-3.R: R code to reproduce Figures 2-3; the same code can be easily modified to get the other figures.
+
+----------------------------------------------------------------------------------------------------------------------------
 mjg211/article_code/Admissible multi-arm stepped-wedge cluster randomized trial designs/
 ----------------------------------------------------------------------------------------------------------------------------
 
