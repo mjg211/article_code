@@ -87,7 +87,7 @@ plot_theme      <- function(base_size = 11, base_family = "") {
 
 # Make sure to have the data.csv and included.csv files in the same working
 # directory
-screened          <- readr::read_csv("/Users/michaelgrayling/Downloads/PSA response - Standardised (1).csv")
+screened          <- readr::read_csv("included.csv")
 included          <- dplyr::filter(screened, `Final inclusion?` == "Yes")
 included_mcrpc    <- dplyr::filter(included, `Type of PC` == "mCRPC")
 data              <- readr::read_csv("data.csv")
