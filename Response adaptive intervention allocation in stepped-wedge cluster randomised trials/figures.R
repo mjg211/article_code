@@ -632,7 +632,7 @@ analyse_ra_sw_data <- function(set_T, X, delta, alpha, beta, eta_range,
                           eta    = paste("eta ==", -1:4),
                           gamma  = paste("gamma ==", c(1, 2.5, 5))))
   nrow_scenarios                     <- nrow(scenarios)
-  setwd(paste0("/Users/michaelgrayling/Documents/Work/Papers/Response adaptive",
+  setwd(paste0("/Users/michaelgrayling/Documents/Papers/Response adaptive",
                " intervention allocation in stepped-wedge cluster randomised ",
                "trials/RA SW-CRT/", prefix))
   C                                  <- nrow(X)
@@ -644,24 +644,43 @@ analyse_ra_sw_data <- function(set_T, X, delta, alpha, beta, eta_range,
                    eta       = rep(scenarios[, 2], each = len_theta),
                    gamma     = rep(scenarios[, 3], each = len_theta),
                    theta     = rep(theta, nrow_scenarios),
-                   theta_hat = numeric(len_theta*nrow_scenarios),
-                   power     = numeric(len_theta*nrow_scenarios),
-                   prop_I    = numeric(len_theta*nrow_scenarios))
+                   mean_theta_hat = numeric(len_theta*nrow_scenarios),
+                   sd_theta_hat   = numeric(len_theta*nrow_scenarios),
+                   power          = numeric(len_theta*nrow_scenarios),
+                   mean_prop_I    = numeric(len_theta*nrow_scenarios),
+                   sd_prop_I      = numeric(len_theta*nrow_scenarios))
   tds_avX                            <-
     tibble::tibble(theta     = rep(theta, each = C*Ti),
                    C         = rep(rep(1:C, each = Ti), len_theta),
                    Ti        = rep(1:Ti, length(theta)/Ti),
                    Xbar_ij   = numeric(length(Ti)))
+  prop_I_pmf <- list()
+  all_prop_I <- NULL
   for (i in 1:nrow(scenarios)) {
     scenario_i                       <-
       suppressMessages(readr::read_csv(paste0(prefix, "_", i, ".csv")))
-    tds_sum[(1 + (i - 1)*len_theta):(i*len_theta), 5:7]      <-
+    unique_prop                      <-
+      sort(unique(unlist(scenario_i[, seq(from = 5, by = 5 + C, length.out = len_theta)])))
+    all_prop_I <- c(NULL, unique_prop)
+    prop_I_pmf[[i]] <- cbind(unique_prop, matrix(0, length(unique_prop), len_theta))
+    tds_sum[(1 + (i - 1)*len_theta):(i*len_theta), 5:9]      <-
       cbind(colMeans(scenario_i[, seq(from = 2, by = 5 + C,
                                       length.out = len_theta)]),
+            apply(scenario_i[, seq(from = 2, by = 5 + C,
+                                   length.out = len_theta)], 2, sd),
             colMeans(scenario_i[, seq(from = 4, by = 5 + C,
                                       length.out = len_theta)]),
             colMeans(scenario_i[, seq(from = 5, by = 5 + C,
-                                      length.out = len_theta)]))
+                                      length.out = len_theta)]),
+            apply(scenario_i[, seq(from = 5, by = 5 + C,
+                                   length.out = len_theta)], 2, sd))
+    cols_j <- seq(from = 5, by = 5 + C, length.out = len_theta)
+    for (j in 1:len_theta) {
+      for (k in 1:length(unique_prop)) {
+        prop_I_pmf[[i]][k, j + 1] <- sum(scenario_i[, cols_j[j]] == unique_prop[k])
+      }
+    }
+    prop_I_pmf[[i]][, -1] <- prop_I_pmf[[i]][, -1]/nrow(scenario_i)
     if (all(scenarios[i, 1] == paste("w =", w_focus),
             scenarios[i, 2] == paste("eta ==", eta_focus),
             scenarios[i, 3] == paste("gamma ==", gamma_focus))) {
@@ -685,6 +704,35 @@ analyse_ra_sw_data <- function(set_T, X, delta, alpha, beta, eta_range,
     remove(scenario_i)
     message(i)
   }
+  all_prop_I <- NULL
+  for (i in 1:nrow(scenarios)) {
+    all_prop_I <- c(all_prop_I, prop_I_pmf[[i]][,1])
+  }
+  all_prop_I <- sort(unique(all_prop_I))
+  prop_I_pmf_data <- tibble::tibble(w      = rep(tds_sum$w,
+                                                 each = length(all_prop_I)),
+                                    eta    = rep(tds_sum$eta,
+                                                 each = length(all_prop_I)),
+                                    gamma  = rep(tds_sum$gamma,
+                                                 each = length(all_prop_I)),
+                                    theta  = rep(tds_sum$theta,
+                                                 each = length(all_prop_I)),
+                                    prop_I = rep(all_prop_I, nrow(tds_sum)),
+                                    prob   = 0)
+  for (i in 1:nrow(scenarios)) {
+    for (j in 1:len_theta) {
+      for (k in 1:length(all_prop_I)) {
+        if (any(prop_I_pmf[[i]][, 1] == all_prop_I[k])) {
+          prop_I_pmf_data$prob[(i - 1)*len_theta*length(all_prop_I) +
+                            (j - 1)*length(all_prop_I) + k] <-
+            prop_I_pmf[[i]][which(prop_I_pmf[[i]][, 1] == all_prop_I[k]), j + 1]
+        }
+      }
+    }
+    message(i)
+  }
+
+
   tds_sum$w                          <-
     factor(tds_sum$w, levels = paste("w =", c("1/1000", "1/4", "1/3", "1/2",
                                               "2/3", "3/4", "999/1000")))
@@ -700,8 +748,10 @@ analyse_ra_sw_data <- function(set_T, X, delta, alpha, beta, eta_range,
   cbbPalette                         <-
     c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
       "#D55E00", "#CC79A7")
-  plots$prop_I                       <-
-    ggplot(tds_sum, aes(theta, prop_I, colour = w)) +
+  tds_sum$bias <- tds_sum$mean_theta_hat - tds_sum$theta
+  tds_sum$RMSE <- sqrt(tds_sum$sd_theta_hat^2 + tds_sum$bias^2)
+  plots$mean_prop_I                  <-
+    ggplot(tds_sum, aes(theta, mean_prop_I, colour = w)) +
     facet_grid(eta~gamma, labeller = label_parsed) +
     geom_hline(yintercept = min_prop, colour = "gray75", linetype = 2,
                size = 1/3) +
@@ -721,7 +771,24 @@ analyse_ra_sw_data <- function(set_T, X, delta, alpha, beta, eta_range,
     xlab(expression(theta)) +
     theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
           text        = element_text(size = 8))
-  ggsave(paste0(prefix, "_prop_I.pdf"), plot = plots$prop_I, width = 5,
+  ggsave(paste0(prefix, "_mean_prop_I.pdf"), plot = plots$mean_prop_I, width = 5,
+         height = 5, units = "in", device = "pdf")
+  plots$sd_prop_I                  <-
+    ggplot(tds_sum, aes(theta, sd_prop_I, colour = w)) +
+    facet_grid(eta~gamma, labeller = label_parsed) +
+    geom_vline(xintercept = 0, colour = "gray75", linetype = 2,
+               size = 1/3) +
+    geom_vline(xintercept = delta, colour = "gray75", linetype = 2,
+               size = 1/3) +
+    geom_line(size = 1/3) +
+    geom_point(size = 1/3) +
+    ph2rand:::theme_ph2rand() +
+    scale_colour_manual(values = cbbPalette) +
+    ylab(paste("Emp. SD prop. of cl.-per. in interv. con. (ESDCP)")) +
+    xlab(expression(theta)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
+          text        = element_text(size = 8))
+  ggsave(paste0(prefix, "_sd_prop_I.pdf"), plot = plots$sd_prop_I, width = 5,
          height = 5, units = "in", device = "pdf")
   plots$power                        <-
     ggplot(tds_sum, aes(theta, power, colour = w)) +
@@ -743,10 +810,42 @@ analyse_ra_sw_data <- function(set_T, X, delta, alpha, beta, eta_range,
           text        = element_text(size = 8))
   ggsave(paste0(prefix, "_power.pdf"), plot = plots$power, width = 5,
          height = 5, units = "in", device = "pdf")
-  plots$prop_I_range                 <-
+  plots$bias                        <-
+    ggplot(tds_sum, aes(theta, bias, colour = w)) +
+    facet_grid(eta~gamma, labeller = label_parsed) +
+    geom_vline(xintercept = 0, colour = "gray75", linetype = 2, size = 1/3) +
+    geom_vline(xintercept = delta, colour = "gray75", linetype = 2,
+               size = 1/3) +
+    geom_line(size = 1/3) +
+    geom_point(size = 1/3) +
+    ph2rand:::theme_ph2rand() +
+    scale_colour_manual(values = cbbPalette) +
+    ylab("Empirical bias (EB)") +
+    xlab(expression(theta)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
+          text        = element_text(size = 8))
+  ggsave(paste0(prefix, "_bias.pdf"), plot = plots$bias, width = 5,
+         height = 5, units = "in", device = "pdf")
+  plots$RMSE                        <-
+    ggplot(tds_sum, aes(theta, RMSE, colour = w)) +
+    facet_grid(eta~gamma, labeller = label_parsed) +
+    geom_vline(xintercept = 0, colour = "gray75", linetype = 2, size = 1/3) +
+    geom_vline(xintercept = delta, colour = "gray75", linetype = 2,
+               size = 1/3) +
+    geom_line(size = 1/3) +
+    geom_point(size = 1/3) +
+    ph2rand:::theme_ph2rand() +
+    scale_colour_manual(values = cbbPalette) +
+    ylab("Empirical RMSE (ERMSE)") +
+    xlab(expression(theta)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
+          text        = element_text(size = 8))
+  ggsave(paste0(prefix, "_rmse.pdf"), plot = plots$RMSE, width = 5,
+         height = 5, units = "in", device = "pdf")
+  plots$mean_prop_I_range                 <-
     ggplot(dplyr::filter(tds_sum, eta %in% paste("eta ==", eta_range) &
                            gamma %in% paste("gamma ==", gamma_range)),
-           aes(theta, prop_I, colour = w)) +
+           aes(theta, mean_prop_I, colour = w)) +
     facet_grid(eta~gamma, labeller = label_parsed) +
     geom_hline(yintercept = min_prop, colour = "gray75", linetype = 2,
                size = 1/3) +
@@ -765,7 +864,25 @@ analyse_ra_sw_data <- function(set_T, X, delta, alpha, beta, eta_range,
     xlab(expression(theta)) +
     theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
           text        = element_text(size = 8))
-  ggsave(paste0(prefix, "_prop_I_range.pdf"), plot = plots$prop_I_range,
+  ggsave(paste0(prefix, "_mean_prop_I_range.pdf"), plot = plots$mean_prop_I_range,
+         width = 5, height = 5, units = "in", device = "pdf")
+  plots$sd_prop_I_range                 <-
+    ggplot(dplyr::filter(tds_sum, eta %in% paste("eta ==", eta_range) &
+                           gamma %in% paste("gamma ==", gamma_range)),
+           aes(theta, sd_prop_I, colour = w)) +
+    facet_grid(eta~gamma, labeller = label_parsed) +
+    geom_vline(xintercept = 0, colour = "gray75", linetype = 2, size = 1/3) +
+    geom_vline(xintercept = delta, colour = "gray75", linetype = 2,
+               size = 1/3) +
+    geom_line(size = 1/3) +
+    geom_point(size = 1/3) +
+    ph2rand:::theme_ph2rand() +
+    scale_colour_manual(values = cbbPalette) +
+    ylab(paste("Emp. SD prop. of cl.-per. in interv. con. (ESDCP)")) +
+    xlab(expression(theta)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
+          text        = element_text(size = 8))
+  ggsave(paste0(prefix, "_sd_prop_I_range.pdf"), plot = plots$sd_prop_I_range,
          width = 5, height = 5, units = "in", device = "pdf")
   plots$power_range                  <-
     ggplot(dplyr::filter(tds_sum, eta %in% paste("eta ==", eta_range) &
@@ -789,24 +906,69 @@ analyse_ra_sw_data <- function(set_T, X, delta, alpha, beta, eta_range,
           text        = element_text(size = 8))
   ggsave(paste0(prefix, "_power_range.pdf"), plot = plots$power_range,
          width = 5, height = 5, units = "in", device = "pdf")
+  plots$bias_range                  <-
+    ggplot(dplyr::filter(tds_sum, eta %in% paste("eta ==", eta_range) &
+                           gamma %in% paste("gamma ==", gamma_range)),
+           aes(theta, bias, colour = w)) +
+    facet_grid(eta~gamma, labeller = label_parsed) +
+    geom_vline(xintercept = 0, colour = "gray75", linetype = 2, size = 1/3) +
+    geom_vline(xintercept = delta, colour = "gray75", linetype = 2,
+               size = 1/3) +
+    geom_line(size = 1/3) +
+    geom_point(size = 1/3) +
+    ph2rand:::theme_ph2rand() +
+    scale_colour_manual(values = cbbPalette) +
+    ylab("Empirical bias (EB)") +
+    xlab(expression(theta)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
+          text        = element_text(size = 8))
+  ggsave(paste0(prefix, "_bias_range.pdf"), plot = plots$bias_range,
+         width = 5, height = 5, units = "in", device = "pdf")
+  plots$rmse_range                  <-
+    ggplot(dplyr::filter(tds_sum, eta %in% paste("eta ==", eta_range) &
+                           gamma %in% paste("gamma ==", gamma_range)),
+           aes(theta, RMSE, colour = w)) +
+    facet_grid(eta~gamma, labeller = label_parsed) +
+    geom_vline(xintercept = 0, colour = "gray75", linetype = 2, size = 1/3) +
+    geom_vline(xintercept = delta, colour = "gray75", linetype = 2,
+               size = 1/3) +
+    geom_line(size = 1/3) +
+    geom_point(size = 1/3) +
+    ph2rand:::theme_ph2rand() +
+    scale_colour_manual(values = cbbPalette) +
+    ylab("Empirical RMSE (ERMSE)") +
+    xlab(expression(theta)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
+          text        = element_text(size = 8))
+  ggsave(paste0(prefix, "_rmse_range.pdf"), plot = plots$rmse_range,
+         width = 5, height = 5, units = "in", device = "pdf")
   data_focus                         <-
     dplyr::filter(tds_sum, eta == paste("eta ==", eta_focus) &
                     gamma == paste("gamma ==", gamma_focus))
   data_focus                         <-
-    tidyr::gather(data_focus, key = "key", value = "value", power:prop_I)
+    tidyr::gather(data_focus, key = "key", value = "value", power:RMSE)
   data_hline                         <-
-    tibble::tibble(key = factor(rep(c("power", "prop_I"), each = 2)),
-                   value = c(alpha, 1 - beta, min_prop, max_prop))
+    tibble::tibble(key = factor(rep(c("power", "mean_prop_I",
+                                      "sd_prop_I", "bias", "RMSE"), each = 2)),
+                   value = c(alpha, 1 - beta, min_prop, max_prop, NA, NA, NA,
+                             NA, NA, NA))
   data_hline                         <- rbind(data_hline,
-                                              c("prop_I", sum(X)/(C*Ti)))
+                                              c("mean_prop_I", sum(X)/(C*Ti)))
   data_hline$value                   <- as.numeric(data_hline$value)
   facet_labs                         <-
     c("Empirical rejection probability (ERP)",
-      paste("Emp. av. prop. of cl.-per. in interv. con. (EACP)"))
-  names(facet_labs)                  <- c("power", "prop_I")
+      paste("Emp. av. prop. of cl.-per. in interv. con. (EACP)"),
+      paste("Emp. SD prop. of cl.-per. in interv. con. (ESDCP)"),
+      "Empirical bias (EB)",
+      "Empirical RMSE (ERMSE)")
+  names(facet_labs)                  <- c("power", "mean_prop_I", "sd_prop_I",
+                                          "bias", "RMSE")
+  data_focus$key <- factor(data_focus$key, levels = c("power",
+                                                      "mean_prop_I", "sd_prop_I",
+                                                      "bias", "RMSE"))
   plots$focus                        <-
     ggplot(data_focus, aes(theta, value, colour = w)) +
-    facet_wrap(~key, nrow = 2, scales = "free_y",
+    facet_wrap(~key, nrow = 5, scales = "free_y",
                labeller = labeller(key = facet_labs)) +
     geom_hline(data = data_hline, aes(yintercept = value), linetype = 2,
                colour = "gray75", size = 1/3) +
@@ -850,7 +1012,74 @@ analyse_ra_sw_data <- function(set_T, X, delta, alpha, beta, eta_range,
   ggsave(paste0(prefix, "_avX.pdf"), plot = plots$avX, width = 5, height = 5,
          units = "in", device = "pdf")
   remove(tds_avX)
-  return(list(plots = plots, data = tds_sum))
+  prop_I_pmf_data <- dplyr::filter(prop_I_pmf_data,
+                                   eta == paste("eta ==", eta_focus) &
+                                     gamma == paste("gamma ==", gamma_focus))
+  prop_I_pmf_data$w <- paste("italic(w) ==",
+                             rep(c("1/1000", "1/4", "1/3", "1/2", "2/3",
+                                   "3/4", "999/1000"),
+                                 each = len_theta*length(all_prop_I)))
+  plots$continuous_prop_I_pmf <-
+    ggplot(prop_I_pmf_data, aes(as.factor(theta), prob, fill = prop_I)) +
+    geom_bar(stat = "identity", position = "stack") +
+    facet_grid(~w, labeller = label_parsed) + scale_fill_viridis_c() +
+    theme_bw() + ylab("Probability") +
+    xlab(expression(theta)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
+          text        = element_text(size = 6),
+          legend.position = "bottom",
+          legend.title = element_blank())
+  ggsave(paste0(prefix, "_continuous_prop_I_pmf.pdf"), plot = plots$continuous_prop_I_pmf,
+         width = 5, height = 5, units = "in", device = "pdf")
+  prop_I_pmf_data$round_prop_I <- round(prop_I_pmf_data$prop_I, 3)
+  plots$discrete_prop_I_pmf <-
+    ggplot(prop_I_pmf_data, aes(as.factor(theta), prob, fill = as.factor(round_prop_I))) +
+    geom_bar(stat = "identity", position = "stack", colour = "black",
+             size = 0.1) +
+    facet_grid(~w, labeller = label_parsed) + scale_fill_viridis_d() +
+    theme_bw() + ylab("Probability") +
+    xlab(expression(theta)) +
+    guides(fill = guide_legend(ncol = 7)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
+          text        = element_text(size = 6),
+          legend.position = "bottom",
+          legend.title = element_blank())
+  ggsave(paste0(prefix, "_discrete_prop_I_pmf.pdf"), plot = plots$discrete_prop_I_pmf,
+         width = 5, height = 7, units = "in", device = "pdf")
+
+  plots$continuous_prop_I_pmf_focus <-
+    ggplot(dplyr::filter(prop_I_pmf_data, w == paste("italic(w) ==",
+                                                     w_focus)),
+                         aes(as.factor(theta), prob, fill = prop_I)) +
+    geom_bar(stat = "identity", position = "stack") +
+    scale_fill_viridis_c() +
+    theme_bw() + ylab("Probability") +
+    xlab(expression(theta)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
+          text        = element_text(size = 8),
+          legend.position = "bottom",
+          legend.title = element_blank())
+  ggsave(paste0(prefix, "_continuous_prop_I_pmf_focus.pdf"), plot = plots$continuous_prop_I_pmf_focus,
+         width = 5, height = 5, units = "in", device = "pdf")
+  prop_I_pmf_data$round_prop_I <- round(prop_I_pmf_data$prop_I, 3)
+  plots$discrete_prop_I_pmf_focus <-
+    ggplot(dplyr::filter(prop_I_pmf_data, w == paste("italic(w) ==",
+                                                     w_focus)),
+                         aes(as.factor(theta), prob, fill = as.factor(round_prop_I))) +
+    geom_bar(stat = "identity", position = "stack", colour = "black",
+             size = 0.1) +
+    scale_fill_viridis_d() +
+    theme_bw() + ylab("Probability") +
+    xlab(expression(theta)) +
+    guides(fill = guide_legend(ncol = 7)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
+          text        = element_text(size = 8),
+          legend.position = "bottom",
+          legend.title = element_blank())
+  ggsave(paste0(prefix, "_discrete_prop_I_pmf_focus.pdf"), plot = plots$discrete_prop_I_pmf_focus,
+         width = 5, height = 7, units = "in", device = "pdf")
+
+  return(list(plots = plots, data = tds_sum, pmf_data = prop_I_pmf_data))
 }
 
 ##### TDS1 #####################################################################
@@ -902,13 +1131,15 @@ tds1_36_focus$set_ti <- "{3,6}"
 tds1_focus           <- dplyr::bind_rows(tds1_3_focus, tds1_4_focus,
                                          tds1_5_focus, tds1_36_focus)
 tds1_focus           <- tidyr::gather(tds1_focus, key = "key", value = "value",
-                                      power:prop_I)
+                                      power:RMSE)
 tds1_focus$set_ti    <- factor(tds1_focus$set_ti,
-                               levels = c("{3,6}", "{3}", "{4}", "{5}"))
+                               levels = c("{3}", "{4}", "{5}", "{3,6}"))
+tds1_focus$key       <- factor(tds1_focus$key, c("power", "mean_prop_I",
+                                                 "sd_prop_I", "bias", "RMSE"))
 facet_labs           <-
-  c("Empirical rejection probability (ERP)",
-    paste("Emp. av. prop. of cl.-per. in interv. con. (EACP)"))
-names(facet_labs)    <- c("power", "prop_I")
+  c("ERP", "EACP", "ESDCP", "EB", "ERMSE")
+names(facet_labs)    <- c("power", "mean_prop_I", "sd_prop_I",
+                          "bias", "RMSE")
 data_hline           <- tibble::tibble(key   = factor(rep("power", 2)),
                                        value = c(alpha, 1 - beta))
 data_hline$value     <- as.numeric(data_hline$value)
@@ -942,6 +1173,43 @@ tds2_3   <- analyse_ra_sw_data(3, X, delta, alpha, beta, -1:1, c(1, 2.5), 0,
 tds2_234 <- analyse_ra_sw_data(2:4, X, delta, alpha, beta, -1:1, c(1, 2.5), 0,
                                2.5, "1/2", "sc2_234")
 
+tds2_3_focus          <- dplyr::filter(tds2_3$data, eta == "eta == 0" &
+                                         gamma == "gamma == 2.5")
+tds2_3_focus$set_ti   <- "{3}"
+tds2_234_focus        <- dplyr::filter(tds2_234$data, eta == "eta == 0" &
+                                         gamma == "gamma == 2.5")
+tds2_234_focus$set_ti <- "{2,3,4}"
+tds2_focus            <- dplyr::bind_rows(tds2_3_focus, tds2_234_focus)
+tds2_focus            <- tidyr::gather(tds2_focus, key = "key", value = "value",
+                                       power:RMSE)
+tds2_focus$set_ti    <- factor(tds2_focus$set_ti,
+                               levels = c("{3}", "{2,3,4}"))
+tds2_focus$key       <- factor(tds2_focus$key, c("power", "mean_prop_I",
+                                                 "sd_prop_I", "bias", "RMSE"))
+facet_labs           <-
+  c("ERP", "EACP", "ESDCP", "EB", "ERMSE")
+names(facet_labs)    <- c("power", "mean_prop_I", "sd_prop_I",
+                          "bias", "RMSE")
+data_hline           <- tibble::tibble(key   = factor(rep("power", 2)),
+                                       value = c(alpha, 1 - beta))
+data_hline$value     <- as.numeric(data_hline$value)
+plot_set_ti          <-
+  ggplot(tds2_focus, aes(theta, value, colour = w)) +
+  facet_grid(key~set_ti, scales = "free_y",
+             labeller = labeller(key = facet_labs)) +
+  geom_hline(data = data_hline, aes(yintercept = value), linetype = 2,
+             colour = "gray75", size = 1/3) +
+  geom_vline(xintercept = 0, colour = "gray75", linetype = 2, size = 1/3) +
+  geom_vline(xintercept = delta, colour = "gray75", linetype = 2,
+             size = 1/3) +
+  geom_line(size = 1/3) + geom_point(size = 1/3) +
+  ph2rand:::theme_ph2rand() + scale_colour_manual(values = cbbPalette) +
+  ylab("Value") + xlab(expression(theta)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
+        text        = element_text(size = 8))
+ggsave("tds2_set_ti.pdf", plot = plot_set_ti, width = 5, height = 5,
+       units = "in", device = "pdf")
+
 ##### TDS3 #####################################################################
 X       <- rbind(c(0, 1, 1, 1),
                  c(0, 1, 1, 1),
@@ -962,3 +1230,40 @@ tds3_2  <- analyse_ra_sw_data(2, X, delta, alpha, beta, -1:1, c(1, 2.5), 0,
                               2.5, "1/2", "sc3_2")
 tds3_23 <- analyse_ra_sw_data(2:3, X, delta, alpha, beta, -1:1, c(1, 2.5), 0,
                               2.5, "1/2", "sc3_23")
+
+tds3_2_focus          <- dplyr::filter(tds3_2$data, eta == "eta == 0" &
+                                         gamma == "gamma == 2.5")
+tds3_2_focus$set_ti   <- "{3}"
+tds3_23_focus         <- dplyr::filter(tds3_23$data, eta == "eta == 0" &
+                                         gamma == "gamma == 2.5")
+tds3_23_focus$set_ti  <- "{2,3}"
+tds3_focus            <- dplyr::bind_rows(tds3_2_focus, tds3_23_focus)
+tds3_focus            <- tidyr::gather(tds3_focus, key = "key", value = "value",
+                                       power:RMSE)
+tds3_focus$set_ti    <- factor(tds3_focus$set_ti,
+                               levels = c("{3}", "{2,3}"))
+tds3_focus$key       <- factor(tds3_focus$key, c("power", "mean_prop_I",
+                                                 "sd_prop_I", "bias", "RMSE"))
+facet_labs           <-
+  c("ERP", "EACP", "ESDCP", "EB", "ERMSE")
+names(facet_labs)    <- c("power", "mean_prop_I", "sd_prop_I",
+                          "bias", "RMSE")
+data_hline           <- tibble::tibble(key   = factor(rep("power", 2)),
+                                       value = c(alpha, 1 - beta))
+data_hline$value     <- as.numeric(data_hline$value)
+plot_set_ti          <-
+  ggplot(tds3_focus, aes(theta, value, colour = w)) +
+  facet_grid(key~set_ti, scales = "free_y",
+             labeller = labeller(key = facet_labs)) +
+  geom_hline(data = data_hline, aes(yintercept = value), linetype = 2,
+             colour = "gray75", size = 1/3) +
+  geom_vline(xintercept = 0, colour = "gray75", linetype = 2, size = 1/3) +
+  geom_vline(xintercept = delta, colour = "gray75", linetype = 2,
+             size = 1/3) +
+  geom_line(size = 1/3) + geom_point(size = 1/3) +
+  ph2rand:::theme_ph2rand() + scale_colour_manual(values = cbbPalette) +
+  ylab("Value") + xlab(expression(theta)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.75),
+        text        = element_text(size = 8))
+ggsave("tds3_set_ti.pdf", plot = plot_set_ti, width = 5, height = 5,
+       units = "in", device = "pdf")
